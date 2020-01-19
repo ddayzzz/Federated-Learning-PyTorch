@@ -11,7 +11,7 @@ import numpy as np
 from tqdm import tqdm
 
 import torch
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from options import args_parser
 from update import LocalUpdate, test_inference
@@ -29,9 +29,9 @@ if __name__ == '__main__':
     args = args_parser()
     exp_details(args)
 
+    device = torch.device(args.gpu) if args.gpu is not None else 'cpu'
     if args.gpu:
-        torch.cuda.set_device(args.gpu)
-    device = 'cuda' if args.gpu else 'cpu'
+        torch.cuda.set_device(device)
 
     # load dataset and user groups
     train_dataset, test_dataset, user_groups = get_dataset(args)
@@ -76,15 +76,17 @@ if __name__ == '__main__':
         local_weights, local_losses = [], []
         print(f'\n | Global Training Round : {epoch+1} |\n')
 
-        global_model.train()
-        m = max(int(args.frac * args.num_users), 1)
+        global_model.train()  # 设置模型处于 training 模式
+        m = max(int(args.frac * args.num_users), 1)  # 选择 train 的 client
         idxs_users = np.random.choice(range(args.num_users), m, replace=False)
 
         for idx in idxs_users:
+            #　每一次 epoch 就会创建一个 Update 对象, 表示 local 的模型
             local_model = LocalUpdate(args=args, dataset=train_dataset,
                                       idxs=user_groups[idx], logger=logger)
             w, loss = local_model.update_weights(
                 model=copy.deepcopy(global_model), global_round=epoch)
+            # 记录 client 得到的权重和 loss
             local_weights.append(copy.deepcopy(w))
             local_losses.append(copy.deepcopy(loss))
 

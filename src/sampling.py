@@ -38,8 +38,10 @@ def mnist_noniid(dataset, num_users):
     labels = dataset.train_labels.numpy()
 
     # sort labels
+    # 所有的 60k 的图像的编号, 0-9的标签. 之后需要按照 0-9 的顺序排序
     idxs_labels = np.vstack((idxs, labels))
     idxs_labels = idxs_labels[:, idxs_labels[1, :].argsort()]
+    # 选出对应的图像编号
     idxs = idxs_labels[0, :]
 
     # divide and assign 2 shards/client
