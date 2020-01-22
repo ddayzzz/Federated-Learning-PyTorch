@@ -66,6 +66,28 @@ class CNNFashion_Mnist(nn.Module):
         return out
 
 
+class CNNCifarTF(nn.Module):
+    def __init__(self, args):
+        # 相关模型的设置参照: https://github.com/tensorflow/models/blob/320545f014c0c62c2a1d9bbf2e837ac62419b980/tutorials/image/cifar10/cifar10.py
+        super(CNNCifarTF, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5)
+        self.pool1 = nn.MaxPool2d(kernel_size=3, stride=2)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=5)
+        self.pool2 = nn.MaxPool2d(kernel_size=3, stride=2)
+        self.fc1 = nn.Linear(64 * 4 * 4, 382)  # 4 FOR 32, 2 FOR 24
+        self.fc2 = nn.Linear(382, 194)
+        self.fc3 = nn.Linear(194, args.num_classes)
+
+    def forward(self, x):
+        x = self.pool1(F.relu(self.conv1(x)))
+        x = self.pool2(F.relu(self.conv2(x)))
+        x = x.view(-1, 64 * 4 * 4)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return F.log_softmax(x, dim=1)
+
+
 class CNNCifar(nn.Module):
     def __init__(self, args):
         super(CNNCifar, self).__init__()

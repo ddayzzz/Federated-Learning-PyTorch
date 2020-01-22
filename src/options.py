@@ -41,6 +41,7 @@ def args_parser():
     parser.add_argument('--max_pool', type=str, default='True',
                         help="Whether use max pooling rather than \
                         strided convolutions")
+    parser.add_argument('--sgd_momentum', type=float, default=0.9, help='SGD optimizer momentum')
 
     # other arguments
     parser.add_argument('--dataset', type=str, default='mnist', help="name \
