@@ -70,6 +70,7 @@ if __name__ == '__main__':
     val_acc_list, net_list = [], []
     cv_loss, cv_acc = [], []
     print_every = 2
+    save_every = args.save_per_epoch
     val_loss_pre, counter = 0, 0
 
     for epoch in tqdm(range(args.epochs)):
@@ -117,13 +118,19 @@ if __name__ == '__main__':
             print(f'Training Loss : {np.mean(np.array(train_loss))}')
             print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
 
+        if (epoch + 1) % save_every == 0:
+            # 保存模型
+            model_filename = '../save/models/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'. \
+                format(args.dataset, args.model, epoch, args.frac, args.iid,
+                       args.local_ep, args.local_bs)
+            torch.save(global_model, model_filename)
+
     # Test inference after completion of training
     test_acc, test_loss = test_inference(args, global_model, test_dataset)
 
     print(f' \n Results after {args.epochs} global rounds of training:')
     print("|---- Avg Train Accuracy: {:.2f}%".format(100*train_accuracy[-1]))
     print("|---- Test Accuracy: {:.2f}%".format(100*test_acc))
-
     # Saving the objects train_loss and train_accuracy:
     file_name = '../save/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.\
         format(args.dataset, args.model, args.epochs, args.frac, args.iid,
