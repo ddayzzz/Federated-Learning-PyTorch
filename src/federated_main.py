@@ -124,6 +124,12 @@ if __name__ == '__main__':
                 format(args.dataset, args.model, epoch, args.frac, args.iid,
                        args.local_ep, args.local_bs)
             torch.save(global_model, model_filename)
+            # 保存 loss 和 准确率的模型参数
+            file_name = '../save/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'. \
+                format(args.dataset, args.model, epoch, args.frac, args.iid,
+                       args.local_ep, args.local_bs)
+            with open(file_name, 'wb') as f:
+                pickle.dump([train_loss, train_accuracy], f)
 
     # Test inference after completion of training
     test_acc, test_loss = test_inference(args, global_model, test_dataset)
