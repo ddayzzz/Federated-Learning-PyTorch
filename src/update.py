@@ -5,6 +5,7 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+from dice_loss import dice_coeff
 
 
 class DatasetSplit(Dataset):
@@ -111,6 +112,83 @@ class LocalUpdate(object):
         return accuracy, loss
 
 
+class BRATS2018LocalUpdate(object):
+
+    def  __init__(self, args, dataset, idxs, logger):
+        self.args = args
+        self.logger = logger
+        self.trainloader, self.validloader, self.n_val = self.train_val(dataset, list(idxs))
+        self.device = 'cuda' if args.gpu else 'cpu'
+        # 网络输出的 logits
+        self.criterion = nn.BCEWithLogitsLoss().to(self.device)
+
+    def train_val(self, dataset, idxs, train_rate=0.8):
+        """
+        将数据分开, 分为 train 和 valid 的 loader
+        :param dataset:
+        :param idxs:
+        :return:
+        """
+        # split indexes for train, validation (train_rate, 1-train_rate)
+        idxs_train = idxs[:int(train_rate*len(idxs))]
+        idxs_val = idxs[int(train_rate*len(idxs)):]
+
+        trainloader = DataLoader(DatasetSplit(dataset, idxs_train), batch_size=self.args.local_bs, shuffle=True, num_workers=1, pin_memory=True)
+        validloader = DataLoader(DatasetSplit(dataset, idxs_val), batch_size=self.args.local_bs, shuffle=False, num_workers=1, pin_memory=True)
+        return trainloader, validloader, len(idxs_val)
+
+    def update_weights(self, model, global_round):
+        # Set mode to train model
+        model.train()
+        epoch_loss = []
+
+        # Set optimizer for the local updates
+        if self.args.optimizer == 'sgd':
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.args.lr,
+                                        momentum=0.5)
+        elif self.args.optimizer == 'adam':
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.args.lr,
+                                         weight_decay=1e-4)
+
+        for iter in range(self.args.local_ep):
+            batch_loss = []
+            for batch_idx, (images, labels) in enumerate(self.trainloader):
+                images, labels = images.to(self.device), labels.to(self.device)
+
+                model.zero_grad()
+                logits = model(images)
+                loss = self.criterion(logits, labels)
+                loss.backward()
+                optimizer.step()
+
+                if self.args.verbose and (batch_idx % 10 == 0):
+                    print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                        global_round, iter, batch_idx * len(images),
+                        len(self.trainloader.dataset),
+                        100. * batch_idx / len(self.trainloader), loss.item()))
+                self.logger.add_scalar('loss', loss.item())
+                batch_loss.append(loss.item())
+            epoch_loss.append(sum(batch_loss)/len(batch_loss))
+
+        return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
+
+    def inference(self, model):
+        """ Returns the inference accuracy and loss.
+        """
+        model.eval()
+        tot = 0
+
+        for batch_idx, (images, labels) in enumerate(self.validloader):
+            images, labels = images.to(self.device), labels.to(self.device)
+
+            # Inference
+            outputs = model(images)
+            for true_mask, pred in zip(labels, outputs):
+                pred = (pred > 0.5).float()
+                tot += dice_coeff(pred, true_mask.squeeze(dim=1)).item()
+        return tot / self.n_val
+
+
 def test_inference(args, model, test_dataset):
     """ Returns the test accuracy and loss.
     """
@@ -139,3 +217,32 @@ def test_inference(args, model, test_dataset):
 
     accuracy = correct/total
     return accuracy, loss
+
+
+def brats2018_test_inference(args, model, test_dataset):
+    """ Returns the test accuracy and loss.
+    """
+    raise NotImplementedError
+    model.eval()
+    tot = 0
+
+    with tqdm(total=n_val, desc='Validation round', unit='img', leave=False) as pbar:
+        for batch in loader:
+            imgs = batch['image']
+            true_masks = batch['mask']
+
+            imgs = imgs.to(device=device, dtype=torch.float32)
+            true_masks = true_masks.to(device=device, dtype=torch.float32)
+
+            mask_pred = net(imgs)
+
+            for true_mask, pred in zip(true_masks, mask_pred):
+                pred = (pred > 0.5).float()
+                if net.n_classes > 1:
+                    tot += F.cross_entropy(pred.unsqueeze(dim=0), true_mask.unsqueeze(dim=0)).item()
+                else:
+                    tot += dice_coeff(pred, true_mask.squeeze(dim=1)).item()
+            pbar.update(imgs.shape[0])
+
+    return tot / n_val
+

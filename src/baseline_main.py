@@ -35,6 +35,9 @@ if __name__ == '__main__':
             global_model = CNNFashion_Mnist(args=args)
         elif args.dataset == 'cifar':
             global_model = CNNCifarTF(args=args)
+        elif args.dataset == 'brats2018':
+            from unet.unet_model import UNet
+            global_model = UNet(n_channels=1, n_classes=1, bilinear=True)
     elif args.model == 'mlp':
         # Multi-layer preceptron
         img_size = train_dataset[0][0].shape

@@ -46,8 +46,7 @@ def get_dataset(args):
             else:
                 # Chose euqal splits for every user
                 user_groups = cifar_noniid(train_dataset, args.num_users)
-
-    elif args.dataset == 'mnist' or 'fmnist':
+    elif args.dataset == 'mnist' or args.dataset == 'fmnist':
         if args.dataset == 'mnist':
             data_dir = '../data/mnist/'
         else:
@@ -75,7 +74,17 @@ def get_dataset(args):
             else:
                 # Chose euqal splits for every user
                 user_groups = mnist_noniid(train_dataset, args.num_users)
-
+    elif args.dataset == 'brats2018':
+        from data.brats2018.dataset import BRATS2018Dataset
+        # from torch.utils.data import random_split
+        from sampling import brats2018_iid
+        data_dir = args.data_dir
+        train_dataset = BRATS2018Dataset(training_dir=data_dir, img_dim=128)
+        test_dataset = None
+        if args.iid:
+            user_groups = brats2018_iid(dataset=train_dataset, num_users=args.num_users)
+        else:
+            raise NotImplementedError('No-iid')
     return train_dataset, test_dataset, user_groups
 
 

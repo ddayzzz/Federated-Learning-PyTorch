@@ -5,7 +5,7 @@
 import argparse
 
 
-def args_parser():
+def _basic_args():
     parser = argparse.ArgumentParser()
 
     # federated arguments (Notation for the arguments followed from paper)
@@ -30,37 +30,48 @@ def args_parser():
                         help='number of each kind of kernel')
     parser.add_argument('--kernel_sizes', type=str, default='3,4,5',
                         help='comma-separated kernel size to \
-                        use for convolution')
+                            use for convolution')
     parser.add_argument('--num_channels', type=int, default=1, help="number \
-                        of channels of imgs")
+                            of channels of imgs")
     parser.add_argument('--norm', type=str, default='batch_norm',
                         help="batch_norm, layer_norm, or None")
     parser.add_argument('--num_filters', type=int, default=32,
                         help="number of filters for conv nets -- 32 for \
-                        mini-imagenet, 64 for omiglot.")
+                            mini-imagenet, 64 for omiglot.")
     parser.add_argument('--max_pool', type=str, default='True',
                         help="Whether use max pooling rather than \
-                        strided convolutions")
+                            strided convolutions")
     parser.add_argument('--sgd_momentum', type=float, default=0.9, help='SGD optimizer momentum')
 
     # other arguments
     parser.add_argument('--dataset', type=str, default='mnist', help="name \
-                        of dataset")
+                            of dataset")
     parser.add_argument('--num_classes', type=int, default=10, help="number \
-                        of classes")
+                            of classes")
     parser.add_argument('--gpu', default=None, help="To use cuda, set \
-                        to a specific GPU ID. Default set to use CPU.")
+                            to a specific GPU ID. Default set to use CPU.")
     parser.add_argument('--optimizer', type=str, default='sgd', help="type \
-                        of optimizer")
+                            of optimizer")
     parser.add_argument('--iid', type=int, default=1,
                         help='Default set to IID. Set to 0 for non-IID.')
     parser.add_argument('--unequal', type=int, default=0,
                         help='whether to use unequal data splits for  \
-                        non-i.i.d setting (use 0 for equal splits)')
+                            non-i.i.d setting (use 0 for equal splits)')
     parser.add_argument('--stopping_rounds', type=int, default=10,
                         help='rounds of early stopping')
     parser.add_argument('--verbose', type=int, default=1, help='verbose')
     parser.add_argument('--seed', type=int, default=1, help='random seed')
     parser.add_argument('--save_per_epoch', type=int, default=10, help='每多少的 epoch 保存一次模型')
+    return parser
+
+def args_parser():
+    parser = _basic_args()
+    args = parser.parse_args()
+    return args
+
+
+def brats2018_args_parser():
+    parser = _basic_args()
+    parser.add_argument('--data_dir', type=str, default='./data/brats2018', help='设置处理后的 BRATS2018 数据集的目录')
     args = parser.parse_args()
     return args

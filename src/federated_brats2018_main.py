@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Python version: 3.6
-
+# 执行图像分割的 FL 代码
 
 import os
 import copy
@@ -13,9 +13,9 @@ from tqdm import tqdm
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from options import args_parser
-from update import LocalUpdate, test_inference
-from models import MLP, CNNMnist, CNNFashion_Mnist, CNNCifar, CNNCifarTF
+from options import brats2018_args_parser
+from update import BRATS2018LocalUpdate, brats2018_test_inference
+from unet import UNet
 from utils import get_dataset, average_weights, exp_details
 
 
@@ -24,9 +24,9 @@ if __name__ == '__main__':
 
     # define paths
     path_project = os.path.abspath('..')
-    logger = SummaryWriter('../logs')
+    logger = SummaryWriter('../brats2018_logs')
 
-    args = args_parser()
+    args = brats2018_args_parser()
     exp_details(args)
 
     device = torch.device(args.gpu) if args.gpu is not None else 'cpu'
@@ -34,26 +34,11 @@ if __name__ == '__main__':
         torch.cuda.set_device(device)
 
     # load dataset and user groups
-    train_dataset, test_dataset, user_groups = get_dataset(args)
+    train_dataset, _, user_groups = get_dataset(args)
 
-    # BUILD MODEL
-    if args.model == 'cnn':
-        # Convolutional neural netork
-        if args.dataset == 'mnist':
-            global_model = CNNMnist(args=args)
-        elif args.dataset == 'fmnist':
-            global_model = CNNFashion_Mnist(args=args)
-        elif args.dataset == 'cifar':
-            global_model = CNNCifarTF(args=args)
-
-    elif args.model == 'mlp':
-        # Multi-layer preceptron
-        img_size = train_dataset[0][0].shape
-        len_in = 1
-        for x in img_size:
-            len_in *= x
-            global_model = MLP(dim_in=len_in, dim_hidden=64,
-                               dim_out=args.num_classes)
+    # 使用 UNET
+    if args.model == 'unet':
+        global_model = UNet(n_channels=1, n_classes=1, bilinear=True)
     else:
         exit('Error: unrecognized model')
 
@@ -66,9 +51,7 @@ if __name__ == '__main__':
     global_weights = global_model.state_dict()
 
     # Training
-    train_loss, train_accuracy = [], []
-    val_acc_list, net_list = [], []
-    cv_loss, cv_acc = [], []
+    train_loss, valid_dc = [], []
     print_every = 2
     save_every = args.save_per_epoch
     val_loss_pre, counter = 0, 0
@@ -83,8 +66,7 @@ if __name__ == '__main__':
 
         for idx in idxs_users:
             #　每一次 epoch 就会创建一个 Update 对象, 表示 local 的模型
-            local_model = LocalUpdate(args=args, dataset=train_dataset,
-                                      idxs=user_groups[idx], logger=logger)
+            local_model = BRATS2018LocalUpdate(args=args, dataset=train_dataset, idxs=user_groups[idx], logger=logger)
             w, loss = local_model.update_weights(
                 model=copy.deepcopy(global_model), global_round=epoch)
             # 记录 client 得到的权重和 loss
@@ -102,21 +84,19 @@ if __name__ == '__main__':
         train_loss.append(loss_avg)
 
         # Calculate avg training accuracy over all users at every epoch
-        list_acc, list_loss = [], []
+        list_dice = []
         global_model.eval()
         for c in range(args.num_users):
-            local_model = LocalUpdate(args=args, dataset=train_dataset,
-                                      idxs=user_groups[c], logger=logger)
-            acc, loss = local_model.inference(model=global_model)
-            list_acc.append(acc)
-            list_loss.append(loss)
-        train_accuracy.append(sum(list_acc)/len(list_acc))
+            # 这里记录的 Dice coefficient
+            local_model = BRATS2018LocalUpdate(args=args, dataset=train_dataset, idxs=user_groups[c], logger=logger)
+            dc = local_model.inference(model=global_model)
+            list_dice.append(dc)
+        valid_dc.append(sum(list_dice) / len(list_dice))  # DC 的平均
 
         # print global training loss after every 'i' rounds
         if (epoch+1) % print_every == 0:
             print(f' \nAvg Training Stats after {epoch+1} global rounds:')
-            print(f'Training Loss : {np.mean(np.array(train_loss))}')
-            print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
+            print('Avg Validation Dice Coefficient: {:.2f}\n'.format(valid_dc[-1]))
 
         if (epoch + 1) % save_every == 0:
             # 保存模型
@@ -129,20 +109,20 @@ if __name__ == '__main__':
                 format(args.dataset, args.model, epoch, args.frac, args.iid,
                        args.local_ep, args.local_bs)
             with open(file_name, 'wb') as f:
-                pickle.dump([train_loss, train_accuracy], f)
+                pickle.dump([train_loss, valid_dc], f)
 
     # Test inference after completion of training
-    test_acc, test_loss = test_inference(args, global_model, test_dataset)
+    # test_acc, test_loss = test_inference(args, global_model, test_dataset)
 
     print(f' \n Results after {args.epochs} global rounds of training:')
-    print("|---- Avg Train Accuracy: {:.2f}%".format(100*train_accuracy[-1]))
-    print("|---- Test Accuracy: {:.2f}%".format(100*test_acc))
+    print("|---- Avg Validation Dice Coefficient: {:.2f}".format(valid_dc[-1]))
+    # print("|---- Test Accuracy: {:.2f}%".format(100*test_acc))
     # Saving the objects train_loss and train_accuracy:
-    file_name = '../save/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.\
+    file_name = '../save/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}]_final.pkl'.\
         format(args.dataset, args.model, args.epochs, args.frac, args.iid,
                args.local_ep, args.local_bs)
 
     with open(file_name, 'wb') as f:
-        pickle.dump([train_loss, train_accuracy], f)
+        pickle.dump([train_loss, valid_dc], f)
 
     print('\n Total Run Time: {0:0.4f}'.format(time.time()-start_time))
