@@ -133,8 +133,8 @@ class BRATS2018LocalUpdate(object):
         idxs_train = idxs[:int(train_rate*len(idxs))]
         idxs_val = idxs[int(train_rate*len(idxs)):]
 
-        trainloader = DataLoader(DatasetSplit(dataset, idxs_train), batch_size=self.args.local_bs, shuffle=True, num_workers=1, pin_memory=True)
-        validloader = DataLoader(DatasetSplit(dataset, idxs_val), batch_size=self.args.local_bs, shuffle=False, num_workers=1, pin_memory=True)
+        trainloader = DataLoader(DatasetSplit(dataset, idxs_train), batch_size=self.args.local_bs, shuffle=True, num_workers=6, pin_memory=True)
+        validloader = DataLoader(DatasetSplit(dataset, idxs_val), batch_size=self.args.local_bs, shuffle=False, num_workers=6, pin_memory=True)
         return trainloader, validloader, len(idxs_val)
 
     def update_weights(self, model, global_round):
