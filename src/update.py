@@ -9,10 +9,13 @@ from dice_loss import dice_coeff
 
 
 class DatasetSplit(Dataset):
-    """An abstract Dataset class wrapped around Pytorch Dataset class.
-    """
 
     def __init__(self, dataset, idxs):
+        """
+        给定原始的数据集和对应的 index, 产生在 index 中存在的子数据集
+        :param dataset:
+        :param idxs:
+        """
         self.dataset = dataset
         self.idxs = [int(i) for i in idxs]
 
@@ -36,28 +39,28 @@ class LocalUpdate(object):
 
     def train_val_test(self, dataset, idxs):
         """
-        Returns train, validation and test dataloaders for a given dataset
-        and user indexes.
+        将数据分开
+        :param dataset: 数据集对象
+        :param idxs: 索引, list
+        :return: train, valid, test
         """
-        # split indexes for train, validation, and test (80, 10, 10)
+        # train, validation, test 的比例 0.8, 0.1, 0.1
         idxs_train = idxs[:int(0.8*len(idxs))]
         idxs_val = idxs[int(0.8*len(idxs)):int(0.9*len(idxs))]
         idxs_test = idxs[int(0.9*len(idxs)):]
-
         trainloader = DataLoader(DatasetSplit(dataset, idxs_train),
                                  batch_size=self.args.local_bs, shuffle=True)
         validloader = DataLoader(DatasetSplit(dataset, idxs_val),
-                                 batch_size=int(len(idxs_val)/10), shuffle=False)
+                                 batch_size=int(len(idxs_val) / 10), shuffle=False)
         testloader = DataLoader(DatasetSplit(dataset, idxs_test),
-                                batch_size=int(len(idxs_test)/10), shuffle=False)
+                                batch_size=int(len(idxs_test) / 10), shuffle=False)
         return trainloader, validloader, testloader
 
     def update_weights(self, model, global_round):
-        # Set mode to train model
         model.train()
         epoch_loss = []
 
-        # Set optimizer for the local updates
+        # 设置优化器
         if self.args.optimizer == 'sgd':
             optimizer = torch.optim.SGD(model.parameters(), lr=self.args.lr,
                                         momentum=0.5)
@@ -77,6 +80,7 @@ class LocalUpdate(object):
                 optimizer.step()
 
                 if self.args.verbose and (batch_idx % 10 == 0):
+                    # [已经处理的样本数/总共拥有的训练集样本数 比例%]
                     print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                         global_round, iter, batch_idx * len(images),
                         len(self.trainloader.dataset),
@@ -133,8 +137,8 @@ class BRATS2018LocalUpdate(object):
         idxs_train = idxs[:int(train_rate*len(idxs))]
         idxs_val = idxs[int(train_rate*len(idxs)):]
 
-        trainloader = DataLoader(DatasetSplit(dataset, idxs_train), batch_size=self.args.local_bs, shuffle=True, num_workers=6, pin_memory=True)
-        validloader = DataLoader(DatasetSplit(dataset, idxs_val), batch_size=self.args.local_bs, shuffle=False, num_workers=6, pin_memory=True)
+        trainloader = DataLoader(DatasetSplit(dataset, idxs_train), batch_size=self.args.local_bs, shuffle=True, num_workers=self.args.num_workers)
+        validloader = DataLoader(DatasetSplit(dataset, idxs_val), batch_size=self.args.local_bs, shuffle=False, num_workers=self.args.num_workers)
         return trainloader, validloader, len(idxs_val)
 
     def update_weights(self, model, global_round):
