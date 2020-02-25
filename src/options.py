@@ -76,3 +76,11 @@ def brats2018_args_parser():
     parser.add_argument('--num_workers', type=int, default=0, help='设置数据加载的进程数量(默认0即加载使用主进程)')
     args = parser.parse_args()
     return args
+
+
+def brats2018_test_args_parser():
+    parser = _basic_args()
+    parser.add_argument('--data_dir', type=str, default='./data/brats2018', help='设置处理后的 BRATS2018 数据集的目录')
+    parser.add_argument('--model_path', type=str, help='设置模型的路径')
+    args = parser.parse_args()
+    return args

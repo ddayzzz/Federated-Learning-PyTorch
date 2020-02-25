@@ -205,32 +205,20 @@ def brats2018_iid(dataset, num_users):
     return dict_users
 
 
-def brats2018_noniid(dataset, num_users, num_shards, num_imgs):
+def brats2018_unbalanced(dataset, num_users):
     """
-    Non-iid 的定义
+    返回用于 unbalanced 的数据集
     :param dataset:
     :param num_users:
     :return:
     """
-    # 必须满足 num_shards * num_imags = 训练集的样本数
-    idx_shard = [i for i in range(num_shards)]
-    dict_users = {i: np.array([]) for i in range(num_users)}
-    idxs = np.arange(num_shards*num_imgs)
-    # 图像分割没有 labels
-
-    # sort labels
-    idxs_labels = np.vstack((idxs, labels))
-    idxs_labels = idxs_labels[:, idxs_labels[1, :].argsort()]
-    idxs = idxs_labels[0, :]
-
-    # divide and assign
-    for i in range(num_users):
-        rand_set = set(np.random.choice(idx_shard, 2, replace=False))
-        idx_shard = list(set(idx_shard) - rand_set)
-        for rand in rand_set:
-            dict_users[i] = np.concatenate(
-                (dict_users[i], idxs[rand*num_imgs:(rand+1)*num_imgs]), axis=0)
-    return dict_users
+    from data.brats2018.dataset import InstitutionWiseBRATS2018Dataset
+    assert isinstance(dataset, InstitutionWiseBRATS2018Dataset)
+    assert len(dataset.institutions) == num_users
+    res = dict()
+    for i, v in enumerate(dataset.institutions_its_sample_index.values()):
+        res[i] = v
+    return res
 
 if __name__ == '__main__':
     dataset_train = datasets.MNIST('./data/mnist/', train=True, download=True,
