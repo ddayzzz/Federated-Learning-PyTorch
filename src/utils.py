@@ -111,10 +111,16 @@ def exp_details(args):
     print(f'    Global Rounds   : {args.epochs}\n')
 
     print('    Federated parameters:')
-    if args.iid:
-        print('    IID')
+    if args.dataset == 'brats2018':
+        if args.balanced:
+            print('    balanced')
+        else:
+            print('    unbalanced')
     else:
-        print('    Non-IID')
+        if args.iid:
+            print('    IID')
+        else:
+            print('    Non-IID')
     print(f'    Fraction of users  : {args.frac}')
     print(f'    Local Batch size   : {args.local_bs}')
     print(f'    Local Epochs       : {args.local_ep}')
