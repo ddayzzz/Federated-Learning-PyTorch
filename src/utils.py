@@ -80,7 +80,7 @@ def get_dataset(args):
         from sampling import brats2018_iid, brats2018_unbalanced
         data_dir = args.data_dir
         test_dataset = None
-        if args.iid:
+        if args.balanced:
             train_dataset = BRATS2018Dataset(training_dir=data_dir, img_dim=128)
             user_groups = brats2018_iid(dataset=train_dataset, num_users=args.num_users)
         else:

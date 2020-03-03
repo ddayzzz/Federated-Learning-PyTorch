@@ -52,8 +52,6 @@ def _basic_args():
                             to a specific GPU ID. Default set to use CPU.")
     parser.add_argument('--optimizer', type=str, default='sgd', help="type \
                             of optimizer")
-    parser.add_argument('--iid', type=int, default=1,
-                        help='Default set to IID. Set to 0 for non-IID.')
     parser.add_argument('--unequal', type=int, default=0,
                         help='whether to use unequal data splits for  \
                             non-i.i.d setting (use 0 for equal splits)')
@@ -66,6 +64,7 @@ def _basic_args():
 
 def args_parser():
     parser = _basic_args()
+    parser.add_argument('--iid', type=int, default=1, help='Default set to IID. Set to 0 for non-IID.')
     args = parser.parse_args()
     return args
 
@@ -73,6 +72,7 @@ def args_parser():
 def brats2018_args_parser():
     parser = _basic_args()
     parser.add_argument('--data_dir', type=str, default='./data/brats2018', help='设置处理后的 BRATS2018 数据集的目录')
+    parser.add_argument('--balanced', type=int, default=1, help='设置是否 balanced')
     parser.add_argument('--num_workers', type=int, default=0, help='设置数据加载的进程数量(默认0即加载使用主进程)')
     args = parser.parse_args()
     return args
