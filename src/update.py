@@ -121,7 +121,7 @@ class BRATS2018LocalUpdate(object):
     def  __init__(self, args, dataset, idxs, logger):
         self.args = args
         self.logger = logger
-        self.trainloader, self.validloader, self.n_val = self.train_val(dataset, list(idxs))
+        self.trainloader, self.validloader, self.n_val = self.train_val(dataset, list(idxs), train_rate=args.train_rate)
         self.device = 'cuda' if args.gpu else 'cpu'
         # 网络输出的 logits
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)

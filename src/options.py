@@ -82,5 +82,6 @@ def brats2018_test_args_parser():
     parser = _basic_args()
     parser.add_argument('--data_dir', type=str, default='./data/brats2018', help='设置处理后的 BRATS2018 数据集的目录')
     parser.add_argument('--model_path', type=str, help='设置模型的路径')
+    parser.add_argument('--train_rate', type=float, default=0.8, help='设置训练集的比例')
     args = parser.parse_args()
     return args

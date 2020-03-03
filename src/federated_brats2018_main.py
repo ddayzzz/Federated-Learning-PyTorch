@@ -100,14 +100,14 @@ if __name__ == '__main__':
 
         if (epoch + 1) % save_every == 0:
             # 保存模型
-            model_filename = '../save/models/{}_{}_{}_C[{}]_balanced[{}]_E[{}]_B[{}].pkl'. \
+            model_filename = '../save/models/{}_{}_{}_C[{}]_balanced[{}]_E[{}]_B[{}]_train_rate[{}].pkl'. \
                 format(args.dataset, args.model, epoch, args.frac, args.balanced,
-                       args.local_ep, args.local_bs)
+                       args.local_ep, args.local_bs, args.train_rate)
             torch.save(global_model, model_filename)
             # 保存 loss 和 准确率的模型参数
-            file_name = '../save/objects/{}_{}_{}_C[{}]_balanced[{}]_E[{}]_B[{}].pkl'. \
+            file_name = '../save/objects/{}_{}_{}_C[{}]_balanced[{}]_E[{}]_B[{}]_train_rate[{}].pkl'. \
                 format(args.dataset, args.model, epoch, args.frac, args.balanced,
-                       args.local_ep, args.local_bs)
+                       args.local_ep, args.local_bs, args.train_rate)
             with open(file_name, 'wb') as f:
                 pickle.dump([train_loss, valid_dc], f)
 
@@ -118,9 +118,9 @@ if __name__ == '__main__':
     print("|---- Avg Validation Dice Coefficient: {:.2f}".format(valid_dc[-1]))
     # print("|---- Test Accuracy: {:.2f}%".format(100*test_acc))
     # Saving the objects train_loss and train_accuracy:
-    file_name = '../save/objects/{}_{}_{}_C[{}]_balanced[{}]_E[{}]_B[{}]_final.pkl'.\
+    file_name = '../save/objects/{}_{}_{}_C[{}]_balanced[{}]_E[{}]_B[{}]_train_rate[{}]_final.pkl'.\
         format(args.dataset, args.model, args.epochs, args.frac, args.balanced,
-               args.local_ep, args.local_bs)
+               args.local_ep, args.local_bs, args.train_rate)
 
     with open(file_name, 'wb') as f:
         pickle.dump([train_loss, valid_dc], f)
