@@ -272,7 +272,7 @@ class BRATS2018DataAugmentationLocalUpdate(BRATS2018LocalUpdate):
 
     def  __init__(self, args, dataset, idxs, logger):
         super(BRATS2018DataAugmentationLocalUpdate, self).__init__(args, dataset, idxs, logger)
-        self.minimum_train_batch_size = args.train_batch_threshold  # 最低的训练的样本数量
+        self.p = args.augmentation_rate  # 最低的训练的样本数量
 
     def train_val(self, dataset, idxs, train_rate=0.8):
         """
@@ -285,78 +285,11 @@ class BRATS2018DataAugmentationLocalUpdate(BRATS2018LocalUpdate):
         idxs_train = idxs[:int(train_rate * len(idxs))]
         idxs_val = idxs[int(train_rate * len(idxs)):]
 
-        trainloader = DataLoader(DatasetSplitForDataAug(dataset, idxs_train, trans=True, p=0.5),
+        trainloader = DataLoader(DatasetSplitForDataAug(dataset, idxs_train, trans=True, p=self.p),
                                  batch_size=self.args.local_bs, shuffle=True, num_workers=self.args.num_workers)
-        validloader = DataLoader(DatasetSplit(dataset, idxs_val), batch_size=self.args.local_bs, shuffle=False,
+        validloader = DataLoader(DatasetSplitForDataAug(dataset, idxs_val, trans=False), batch_size=self.args.local_bs, shuffle=False,
                                  num_workers=self.args.num_workers)
         return trainloader, validloader, len(idxs_val)
-
-    def update_weights(self, model, global_round):
-        # Set mode to train model
-
-        model.train()
-        epoch_loss = []
-
-        # Set optimizer for the local updates
-        if self.args.optimizer == 'sgd':
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.args.lr,
-                                        momentum=0.5)
-        elif self.args.optimizer == 'adam':
-            optimizer = torch.optim.Adam(model.parameters(), lr=self.args.lr,
-                                         weight_decay=1e-4)
-        original_train_datasize = len(self.trainloader.dataset)
-        # 检查是否为 -1
-        if self.minimum_train_batch_size < 0:
-            self.minimum_train_batch_size = original_train_datasize
-        assert self.minimum_train_batch_size >= original_train_datasize
-        for iter in range(self.args.local_ep):
-            batch_loss = []
-            total_trained_samples = 0
-
-            while total_trained_samples < self.minimum_train_batch_size:
-                for batch_idx, (images, labels) in enumerate(self.trainloader):
-                    images, labels = images.to(self.device), labels.to(self.device)
-
-                    model.zero_grad()
-                    logits = model(images)
-                    loss = self.criterion(logits, labels)
-                    loss.backward()
-                    optimizer.step()
-                    total_trained_samples += len(images)
-                    if self.args.verbose and (batch_idx % 10 == 0):
-                        if total_trained_samples <= original_train_datasize:
-                            print('| Global Round : {} | Local Epoch : {} | [{}/{},EXT: {} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                                global_round, iter, total_trained_samples,
-                                original_train_datasize, self.minimum_train_batch_size,
-                                100. * batch_idx / len(self.trainloader), loss.item()))
-                        else:
-                            print('| Global Round : {} | Local Epoch : {} | [EXT: {}/{}]\tLoss: {:.6f}'.format(
-                                global_round, iter, total_trained_samples - original_train_datasize,
-                                self.minimum_train_batch_size - original_train_datasize, loss.item()))
-                    self.logger.add_scalar('loss', loss.item())
-                    batch_loss.append(loss.item())
-                    if total_trained_samples > self.minimum_train_batch_size:
-                        break
-
-            epoch_loss.append(sum(batch_loss)/len(batch_loss))
-
-        return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
-
-    def inference(self, model):
-        """ Returns the inference accuracy and loss.
-        """
-        model.eval()
-        tot = 0
-
-        for batch_idx, (images, labels) in enumerate(self.validloader):
-            images, labels = images.to(self.device), labels.to(self.device)
-
-            # Inference
-            outputs = model(images)
-            for true_mask, pred in zip(labels, outputs):
-                pred = (pred > 0.5).float()
-                tot += dice_coeff(pred, true_mask.squeeze(dim=1)).item()
-        return tot / self.n_val
 
 
 def test_inference(args, model, test_dataset):
