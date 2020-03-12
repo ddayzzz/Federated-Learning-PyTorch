@@ -132,6 +132,21 @@ class InstitutionWiseBRATS2018Dataset(tdata.Dataset):
         imga = self._preprocess(np.load(self.annotations[item]))
         return imgi, imga  # image, mask
 
+
+class InstitutionWiseBRATS2018DatasetDataAugmentation(InstitutionWiseBRATS2018Dataset):
+
+    def __init__(self, training_dir, img_dim, config_json, max_size=None):
+        super(InstitutionWiseBRATS2018DatasetDataAugmentation, self).__init__(training_dir, img_dim, config_json, max_size)
+        # 这个类不对数据进行相关的处理, 处理直接在 DATASPLIT 中
+
+    def _preprocess(self, img):
+        # [H, W]
+        img = transform.resize(img, (self.img_dim, self.img_dim))
+        # float64 -> float32
+        img = img.astype(np.float32)
+        return img
+
+
 if __name__ == '__main__':
     # training_dir = os.path.sep.join(('..', 'brats2018', 'training'))
     # dataset = BRATS2018Dataset(training_dir=training_dir, img_dim=128)

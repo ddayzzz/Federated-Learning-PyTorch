@@ -87,6 +87,18 @@ def get_dataset(args):
             # BRATS2018 得到的数据来自于 19家机构. 默认
             train_dataset = InstitutionWiseBRATS2018Dataset(training_dir=data_dir, img_dim=128, config_json='../data/brats2018/hgg_config.json')
             user_groups = brats2018_unbalanced(dataset=train_dataset, num_users=args.num_users)
+    elif args.dataset == 'brats2018_data_aug':
+        from data.brats2018.dataset import InstitutionWiseBRATS2018DatasetDataAugmentation
+        # from torch.utils.data import random_split
+        from sampling import brats2018_iid, brats2018_unbalanced
+        data_dir = args.data_dir
+        test_dataset = None
+        if args.balanced:
+            raise NotImplementedError
+        else:
+            # BRATS2018 得到的数据来自于 19家机构. 默认
+            train_dataset = InstitutionWiseBRATS2018DatasetDataAugmentation(training_dir=data_dir, img_dim=128, config_json='../data/brats2018/hgg_config.json')
+            user_groups = brats2018_unbalanced(dataset=train_dataset, num_users=args.num_users)
     return train_dataset, test_dataset, user_groups
 
 
@@ -111,7 +123,7 @@ def exp_details(args):
     print(f'    Global Rounds   : {args.epochs}\n')
 
     print('    Federated parameters:')
-    if args.dataset == 'brats2018':
+    if args.dataset.startswith('brats2018'):
         if args.balanced:
             print('    balanced')
         else:
