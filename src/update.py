@@ -271,8 +271,8 @@ class DatasetSplitForDataAug(DatasetSplit):
 class BRATS2018DataAugmentationLocalUpdate(BRATS2018LocalUpdate):
 
     def  __init__(self, args, dataset, idxs, logger):
-        super(BRATS2018DataAugmentationLocalUpdate, self).__init__(args, dataset, idxs, logger)
         self.p = args.augmentation_rate  # 最低的训练的样本数量
+        super(BRATS2018DataAugmentationLocalUpdate, self).__init__(args, dataset, idxs, logger)
 
     def train_val(self, dataset, idxs, train_rate=0.8):
         """
