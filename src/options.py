@@ -95,5 +95,6 @@ def brats2018_data_aug_args_parser():
     parser.add_argument('--balanced', type=int, default=1, help='设置是否 balanced')
     parser.add_argument('--num_workers', type=int, default=0, help='设置数据加载的进程数量(默认0即加载使用主进程)')
     parser.add_argument('--train_rate', type=float, default=0.8, help='设置训练集的比例')
+    parser.add_argument('--minimum_trained_image_size', type=int, default=-1, help='设置每个 local epoch 需要训练的最小的样本数量, 不足的将会生成')
     args = parser.parse_args()
     return args
